@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { describeRoute } from "hono-openapi";
+import { resolver, validator as zValidator } from "hono-openapi/zod";
 import { User } from "#/modules/user/user.entity";
 import {
   getAllUsers,
@@ -14,29 +15,54 @@ import { adminMiddleware } from "#/middlewares/auth";
 
 export const userRoutes = new Hono();
 
-userRoutes.get("/", async (c) => {
-  const users: User[] = await getAllUsers();
-
-  return c.json<{
-    success: boolean;
-    message: string;
-    users: User[];
-    counter: number;
-    statusCode: 200;
-  }>(
-    {
-      success: true,
-      message: "Get list all users",
-      users,
-      counter: users.length,
-      statusCode: 200,
+userRoutes.get(
+  "/",
+  describeRoute({
+    description: "Returns list of users (requires authentication)",
+    responses: {
+      200: {
+        description: "Successful response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                users: z.array(z.instanceof(User)),
+                counter: z.number(),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
+      },
     },
-    200,
-    {
-      "Content-Type": "application/json",
-    }
-  );
-});
+    validateResponse: true,
+  }),
+  async (c) => {
+    const users: User[] = await getAllUsers();
+
+    return c.json<{
+      success: boolean;
+      message: string;
+      users: User[];
+      counter: number;
+      statusCode: 200;
+    }>(
+      {
+        success: true,
+        message: "Get list all users",
+        users,
+        counter: users.length,
+        statusCode: 200,
+      },
+      200,
+      {
+        "Content-Type": "application/json",
+      }
+    );
+  }
+);
 
 const createUserSchema = z.object({
   firstName: z.string().min(2, "First Name must be at least 2 characters long"),
@@ -48,6 +74,42 @@ const createUserSchema = z.object({
 userRoutes.post(
   "/",
   adminMiddleware,
+  describeRoute({
+    description: "Create new user (requires authentication and admin role)",
+    responses: {
+      201: {
+        description: "Successful response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                user: z.instanceof(User),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
+      },
+      409: {
+        description: "Resource conflict response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                error: z.string(),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
+      },
+    },
+    validateResponse: true,
+  }),
   zValidator("json", createUserSchema),
   async (c) => {
     const { firstName, lastName, email, password } = c.req.valid("json");
@@ -101,49 +163,88 @@ userRoutes.post(
   }
 );
 
-userRoutes.get("/:id", async (c) => {
-  const id: string = c.req.param("id");
+userRoutes.get(
+  "/:id",
+  describeRoute({
+    description: "Get user by id (requires authentication)",
+    responses: {
+      200: {
+        description: "Successful response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                user: z.nullable(z.instanceof(User)),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
+      },
+      404: {
+        description: "User not found response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                error: z.string(),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
+      },
+    },
+    validateResponse: true,
+  }),
+  async (c) => {
+    const id: string = c.req.param("id");
 
-  const user: User | null = await userById(id);
+    const user: User | null = await userById(id);
 
-  if (!user) {
+    if (!user) {
+      return c.json<{
+        success: boolean;
+        message: string;
+        error: string;
+        statusCode: number;
+      }>(
+        {
+          success: false,
+          message: "User not found",
+          error: "Unregistered user",
+          statusCode: 404,
+        },
+        404,
+        {
+          "Content-Type": "application/json",
+        }
+      );
+    }
+
     return c.json<{
       success: boolean;
       message: string;
-      error: string;
+      user: User | null;
       statusCode: number;
     }>(
       {
-        success: false,
-        message: "User not found",
-        error: "Unregistered user",
-        statusCode: 404,
+        success: true,
+        message: "Get user by ID",
+        user,
+        statusCode: 200,
       },
-      404,
+      200,
       {
         "Content-Type": "application/json",
       }
     );
   }
-
-  return c.json<{
-    success: boolean;
-    message: string;
-    user: User | null;
-    statusCode: number;
-  }>(
-    {
-      success: true,
-      message: "Get user by ID",
-      user,
-      statusCode: 200,
-    },
-    200,
-    {
-      "Content-Type": "application/json",
-    }
-  );
-});
+);
 
 const updateUserSchema = z.object({
   firstName: z.string().min(2, "First Name must be at least 2 characters long"),
@@ -152,90 +253,168 @@ const updateUserSchema = z.object({
   password: z.string(),
 });
 
-userRoutes.put("/:id", zValidator("json", updateUserSchema), async (c) => {
-  const id: string = c.req.param("id");
-
-  const { firstName, lastName, email, password } = c.req.valid("json");
-
-  const user: User | null = await userById(id);
-
-  if (!user) {
-    return c.json<{
-      success: boolean;
-      message: string;
-      error: string;
-      statusCode: number;
-    }>(
-      {
-        success: false,
-        message: "User not found",
-        error: "Unregistered user",
-        statusCode: 404,
+userRoutes.put(
+  "/:id",
+  describeRoute({
+    description: "Update user by id (requires authentication)",
+    responses: {
+      200: {
+        description: "Successful response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                user: z.nullable(z.instanceof(User)),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
       },
-      404,
-      {
-        "Content-Type": "application/json",
-      }
-    );
-  }
-
-  await updateUser(id, firstName, lastName, email, password);
-
-  const newUser: User | null = await userById(id);
-
-  return c.json<{
-    success: boolean;
-    message: string;
-    user: User | null;
-    statusCode: number;
-  }>(
-    {
-      success: true,
-      message: "User Updated",
-      user: newUser,
-      statusCode: 200,
+      404: {
+        description: "User not found response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                error: z.string(),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
+      },
     },
-    200,
-    {
-      "Content-Type": "application/json",
+    validateResponse: true,
+  }),
+  zValidator("json", updateUserSchema),
+  async (c) => {
+    const id: string = c.req.param("id");
+
+    const { firstName, lastName, email, password } = c.req.valid("json");
+
+    const user: User | null = await userById(id);
+
+    if (!user) {
+      return c.json<{
+        success: boolean;
+        message: string;
+        error: string;
+        statusCode: number;
+      }>(
+        {
+          success: false,
+          message: "User not found",
+          error: "Unregistered user",
+          statusCode: 404,
+        },
+        404,
+        {
+          "Content-Type": "application/json",
+        }
+      );
     }
-  );
-});
 
-userRoutes.delete("/:id", async (c) => {
-  const id: string = c.req.param("id");
+    await updateUser(id, firstName, lastName, email, password);
 
-  const user: User | null = await userById(id);
+    const newUser: User | null = await userById(id);
 
-  if (!user) {
     return c.json<{
       success: boolean;
       message: string;
-      error: string;
+      user: User | null;
       statusCode: number;
     }>(
       {
-        success: false,
-        message: "User not found",
-        error: "Not Found",
-        statusCode: 404,
+        success: true,
+        message: "User Updated",
+        user: newUser,
+        statusCode: 200,
       },
-      404,
+      200,
       {
         "Content-Type": "application/json",
       }
     );
   }
+);
 
-  await deleteUser(id);
-
-  return c.json<{ success: boolean; message: string; statusCode: number }>(
-    {
-      success: true,
-      message: `User with ID ${id} deleted with success`,
-      statusCode: 200,
+userRoutes.delete(
+  "/:id",
+  describeRoute({
+    description: "Delete user by id (requires authentication)",
+    responses: {
+      200: {
+        description: "Successful response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
+      },
+      404: {
+        description: "User not found response",
+        content: {
+          "application/json": {
+            schema: resolver(
+              z.object({
+                success: z.boolean(),
+                message: z.string(),
+                error: z.string(),
+                statusCode: z.number(),
+              })
+            ),
+          },
+        },
+      },
     },
-    200,
-    { "Content-Type": "application/json" }
-  );
-});
+    validateResponse: true,
+  }),
+  async (c) => {
+    const id: string = c.req.param("id");
+
+    const user: User | null = await userById(id);
+
+    if (!user) {
+      return c.json<{
+        success: boolean;
+        message: string;
+        error: string;
+        statusCode: number;
+      }>(
+        {
+          success: false,
+          message: "User not found",
+          error: "Not Found",
+          statusCode: 404,
+        },
+        404,
+        {
+          "Content-Type": "application/json",
+        }
+      );
+    }
+
+    await deleteUser(id);
+
+    return c.json<{ success: boolean; message: string; statusCode: number }>(
+      {
+        success: true,
+        message: `User with ID ${id} deleted with success`,
+        statusCode: 200,
+      },
+      200,
+      { "Content-Type": "application/json" }
+    );
+  }
+);
