@@ -8,7 +8,6 @@ import {
   checkUserExistsByEmail,
   createUser,
 } from "#/modules/user/user.service";
-import { hashPassword } from "#/utils/hashPassword";
 import { verifyPassword } from "#/utils/verifyPassword";
 import { generateToken } from "#/modules/auth/auth.module";
 
@@ -97,13 +96,11 @@ authRoutes.post(
         );
       }
 
-      const hashPass: string = await hashPassword(password);
-
       const newUser: User = await createUser(
         firstName,
         lastName,
         email,
-        hashPass
+        password
       );
 
       return c.json<{ success: boolean; message: string; user: User }>(
