@@ -11,6 +11,21 @@ import {
   updateTool,
   deleteTool,
 } from "#/modules/tool/tool.service";
+import {
+  createToolSchema,
+  updateToolSchema,
+  getAllToolSuccessReponseSchema,
+  createToolSuccessResponseSchema,
+  getByIdSuccessResponseSchema,
+  toolUpdateSuccessReponseSchema,
+  toolDeleteSuccessReponseSchema,
+  toolResourceConflitResponseSchema,
+  toolNotFoundResponseSchema,
+} from "#/modules/tool/schemas";
+import {
+  tokenNotProvidedResponseSchema,
+  tokenInvalidOrExpiredResponseSchema,
+} from "#/schemas";
 
 export const toolRoutes = new Hono();
 
@@ -23,15 +38,23 @@ toolRoutes.get(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                tools: z.array(z.instanceof(Tool)),
-                counter: z.number(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(getAllToolSuccessReponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -63,14 +86,6 @@ toolRoutes.get(
   }
 );
 
-const createToolSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters long"),
-  description: z
-    .string()
-    .min(2, "Description must be at least 2 characters long"),
-  website: z.string().url({ message: "Website must be a url" }),
-});
-
 toolRoutes.post(
   "/",
   describeRoute({
@@ -80,14 +95,23 @@ toolRoutes.post(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                tool: z.instanceof(Tool),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(createToolSuccessResponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -95,14 +119,7 @@ toolRoutes.post(
         description: "Resource conflict response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                error: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(toolResourceConflitResponseSchema),
           },
         },
       },
@@ -166,14 +183,23 @@ toolRoutes.get(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                tool: z.nullable(z.instanceof(Tool)),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(getByIdSuccessResponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -181,14 +207,7 @@ toolRoutes.get(
         description: "Tool not found response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                error: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(toolNotFoundResponseSchema),
           },
         },
       },
@@ -240,14 +259,6 @@ toolRoutes.get(
   }
 );
 
-const updateToolSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters long"),
-  description: z
-    .string()
-    .min(2, "Description must be at least 2 characters long"),
-  website: z.string().url({ message: "Website must be a url" }),
-});
-
 toolRoutes.put(
   "/:id",
   describeRoute({
@@ -257,14 +268,23 @@ toolRoutes.put(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                tool: z.nullable(z.instanceof(Tool)),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(toolUpdateSuccessReponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -272,14 +292,7 @@ toolRoutes.put(
         description: "Tool not found response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                error: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(toolNotFoundResponseSchema),
           },
         },
       },
@@ -347,13 +360,23 @@ toolRoutes.delete(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(createToolSuccessResponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -361,14 +384,7 @@ toolRoutes.delete(
         description: "Tool not found response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                error: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(toolNotFoundResponseSchema),
           },
         },
       },
