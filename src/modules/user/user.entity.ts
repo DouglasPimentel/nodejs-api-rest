@@ -9,7 +9,7 @@ import {
 export enum UserRole {
   OWNER = "owner",
   MANAGER = "manager",
-  VIEW = "view",
+  VIEWER = "viewer",
 }
 
 @Entity({ name: "users" })
@@ -19,7 +19,7 @@ export class User {
     lastName: string,
     email: string,
     password: string,
-    role: UserRole.VIEW
+    role: UserRole.VIEWER
   ) {
     this.firstName = firstName;
     this.lastName = lastName;
@@ -49,7 +49,7 @@ export class User {
   @Column({
     type: "enum",
     enum: UserRole,
-    default: UserRole.VIEW,
+    default: UserRole.VIEWER,
   })
   role!: UserRole;
 

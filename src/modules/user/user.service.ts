@@ -31,7 +31,7 @@ export async function createUser(
 
   const hash: string = await hashPassword(password);
 
-  const user: User = new User(firstName, lastName, email, hash, UserRole.VIEW);
+  const user: User = new User(firstName, lastName, email, hash, UserRole.VIEWER);
 
   const newUser: User = await userRepository.save(user);
 
