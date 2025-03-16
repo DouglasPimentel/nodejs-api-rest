@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { z } from "zod";
 import { describeRoute } from "hono-openapi";
 import { resolver, validator as zValidator } from "hono-openapi/zod";
 import { User } from "#/modules/user/user.entity";
@@ -12,6 +11,21 @@ import {
   deleteUser,
 } from "#/modules/user/user.service";
 import { adminMiddleware } from "#/middlewares/auth";
+import {
+  createUserSchema,
+  updateUserSchema,
+  getAllUserSuccessReponseSchema,
+  createUserSuccessResponseSchema,
+  getByIdSuccessResponseSchema,
+  userNotFoundResponseSchema,
+  userResourceConflitResponseSchema,
+  userUpdateSuccessReponseSchema,
+  userDeleteSuccessReponseSchema,
+} from "#/modules/user/schemas";
+import {
+  tokenNotProvidedResponseSchema,
+  tokenInvalidOrExpiredResponseSchema,
+} from "#/schemas";
 
 export const userRoutes = new Hono();
 
@@ -24,15 +38,23 @@ userRoutes.get(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                users: z.array(z.instanceof(User)),
-                counter: z.number(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(getAllUserSuccessReponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -64,13 +86,6 @@ userRoutes.get(
   }
 );
 
-const createUserSchema = z.object({
-  firstName: z.string().min(2, "First Name must be at least 2 characters long"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters long"),
-  email: z.string().email("Invalid email"),
-  password: z.string(),
-});
-
 userRoutes.post(
   "/",
   adminMiddleware,
@@ -81,14 +96,23 @@ userRoutes.post(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                user: z.instanceof(User),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(createUserSuccessResponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -96,14 +120,7 @@ userRoutes.post(
         description: "Resource conflict response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                error: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(userResourceConflitResponseSchema),
           },
         },
       },
@@ -172,14 +189,23 @@ userRoutes.get(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                user: z.nullable(z.instanceof(User)),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(getByIdSuccessResponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -187,14 +213,7 @@ userRoutes.get(
         description: "User not found response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                error: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(userNotFoundResponseSchema),
           },
         },
       },
@@ -246,13 +265,6 @@ userRoutes.get(
   }
 );
 
-const updateUserSchema = z.object({
-  firstName: z.string().min(2, "First Name must be at least 2 characters long"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters long"),
-  email: z.string().email("Invalid email"),
-  password: z.string(),
-});
-
 userRoutes.put(
   "/:id",
   describeRoute({
@@ -262,14 +274,23 @@ userRoutes.put(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                user: z.nullable(z.instanceof(User)),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(userUpdateSuccessReponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -277,14 +298,7 @@ userRoutes.put(
         description: "User not found response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                error: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(userNotFoundResponseSchema),
           },
         },
       },
@@ -352,13 +366,23 @@ userRoutes.delete(
         description: "Successful response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(userDeleteSuccessReponseSchema),
+          },
+        },
+      },
+      401: {
+        description: "Token not provided",
+        content: {
+          "application/json": {
+            schema: resolver(tokenNotProvidedResponseSchema),
+          },
+        },
+      },
+      403: {
+        description: "Token invalid or expired",
+        content: {
+          "application/json": {
+            schema: resolver(tokenInvalidOrExpiredResponseSchema),
           },
         },
       },
@@ -366,14 +390,7 @@ userRoutes.delete(
         description: "User not found response",
         content: {
           "application/json": {
-            schema: resolver(
-              z.object({
-                success: z.boolean(),
-                message: z.string(),
-                error: z.string(),
-                statusCode: z.number(),
-              })
-            ),
+            schema: resolver(userNotFoundResponseSchema),
           },
         },
       },
