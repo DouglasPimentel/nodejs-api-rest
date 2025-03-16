@@ -1,3 +1,4 @@
+import "zod-openapi/extend";
 import { Hono } from "hono";
 import { z } from "zod";
 import { describeRoute } from "hono-openapi";
@@ -31,16 +32,42 @@ authRoutes.post(
           "application/json": {
             schema: resolver(
               z.object({
-                success: z.boolean(),
-                message: z.string(),
-                user: z.instanceof(User),
-                statusCode: z.number(),
+                success: z.boolean().openapi({ example: true }),
+                message: z.string().openapi({ example: "New User Created" }),
+                user: z.object({
+                  id: z.string().uuid(),
+                  firstName: z.string().openapi({ example: "John" }),
+                  lastName: z.string().openapi({ example: "Doe" }),
+                  email: z
+                    .string()
+                    .email()
+                    .openapi({ example: "john@example.com" }),
+                  password: z
+                    .string()
+                    .describe(
+                      "Hashed password using Argon2. Example: $argon2id$v=19$m=65536,t=3,p=4$..."
+                    )
+                    .openapi({
+                      description:
+                        "Hashed password using Argon2. Example: $argon2id$v=19$m=65536,t=3,p=4$...",
+                      example: "$argon2id$v=19$m=65536,t=3,p=4$uPpL0H9...",
+                    }),
+                  active: z.boolean().openapi({ example: true }),
+                  role: z
+                    .enum(["owner", "manager", "viewer"])
+                    .openapi({ example: "viewer" }),
+                  createdAt: z.string().datetime(),
+                  updatedAt: z.string().datetime(),
+                }),
+                statusCode: z
+                  .number()
+                  .openapi({ description: "Status code", example: 201 }),
               })
             ),
           },
         },
       },
-      400: {
+      409: {
         description: "Resource conflict response",
         content: {
           "application/json": {
@@ -48,7 +75,9 @@ authRoutes.post(
               z.object({
                 success: z.boolean(),
                 error: z.string(),
-                statusCode: z.number(),
+                statusCode: z
+                  .number()
+                  .openapi({ description: "Status code", example: 409 }),
               })
             ),
           },
@@ -62,7 +91,9 @@ authRoutes.post(
               z.object({
                 success: z.boolean(),
                 error: z.string(),
-                statusCode: z.number(),
+                statusCode: z
+                  .number()
+                  .openapi({ description: "Status code", example: 500 }),
               })
             ),
           },
@@ -87,9 +118,9 @@ authRoutes.post(
           {
             success: false,
             error: "Email already registered",
-            statusCode: 400,
+            statusCode: 409,
           },
-          400,
+          409,
           {
             "Content-Type": "application/json",
           }
@@ -103,11 +134,17 @@ authRoutes.post(
         password
       );
 
-      return c.json<{ success: boolean; message: string; user: User }>(
+      return c.json<{
+        success: boolean;
+        message: string;
+        user: User;
+        statusCode: number;
+      }>(
         {
           success: true,
           message: "New User Created",
           user: newUser,
+          statusCode: 201,
         },
         201,
         { "Content-Type": "application/json" }
@@ -148,10 +185,12 @@ authRoutes.post(
           "application/json": {
             schema: resolver(
               z.object({
-                success: z.boolean(),
-                message: z.string(),
+                success: z.boolean().openapi({ example: true }),
+                message: z.string().openapi({ example: "Login Success" }),
                 accessToken: z.string(),
-                statusCode: z.number(),
+                statusCode: z
+                  .number()
+                  .openapi({ description: "Status code", example: 200 }),
               })
             ),
           },
@@ -163,9 +202,11 @@ authRoutes.post(
           "application/json": {
             schema: resolver(
               z.object({
-                success: z.boolean(),
-                error: z.string(),
-                statusCode: z.number(),
+                success: z.boolean().openapi({ example: false }),
+                error: z.string().openapi({ example: "Invalid password" }),
+                statusCode: z
+                  .number()
+                  .openapi({ description: "Status code", example: 400 }),
               })
             ),
           },
@@ -177,9 +218,11 @@ authRoutes.post(
           "application/json": {
             schema: resolver(
               z.object({
-                success: z.boolean(),
-                error: z.string(),
-                statusCode: z.number(),
+                success: z.boolean().openapi({ example: false }),
+                error: z.string().openapi({ example: "Email not registered" }),
+                statusCode: z
+                  .number()
+                  .openapi({ description: "Status code", example: 404 }),
               })
             ),
           },
@@ -191,9 +234,13 @@ authRoutes.post(
           "application/json": {
             schema: resolver(
               z.object({
-                success: z.boolean(),
-                error: z.string(),
-                statusCode: z.number(),
+                success: z.boolean().openapi({ example: false }),
+                error: z
+                  .string()
+                  .openapi({ example: "User login attempt failed" }),
+                statusCode: z
+                  .number()
+                  .openapi({ description: "Status code", example: 500 }),
               })
             ),
           },
@@ -225,7 +272,7 @@ authRoutes.post(
         password
       );
 
-      if (!checkPassword && checkPassword === null) {
+      if (!checkPassword) {
         logger.warn({ password }, "Invalid password");
         return c.json<{ success: boolean; error: string; statusCode: number }>(
           { success: false, error: "Invalid password", statusCode: 400 },
