@@ -9,8 +9,11 @@
     "skipLibCheck": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "outDir": "dist",
     "paths": {
       "#/*": ["./src/*"]
     }
-  }
+  },
+  "include": ["**/*.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

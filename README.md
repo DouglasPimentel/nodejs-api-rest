@@ -79,7 +79,9 @@ Authorization: Bearer <seu-token>
 
 ## 📜 Scripts Disponíveis
 
-- `pnpm dev` - Inicia o servidor em modo de desenvolvimento
+- `pnpm build` - Fazer o build - Preparar os arquivos para produção
+- `pnpm start` - Inicia o servidor em modo de produção
+- `pnpm dev`   - Inicia o servidor em modo de desenvolvimento
 
 ## 🤝 Contribuição
 
